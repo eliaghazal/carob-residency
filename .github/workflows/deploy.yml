@@ -1,0 +1,73 @@
+# Merges to main deploy to staging; a version tag (v1.2.3) promotes to production
+# after approval in the protected `production` environment.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io/eliaghazal
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: tag
+        run: echo "tag=sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: infra/docker/python.Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/carob-api:${{ steps.tag.outputs.tag }}
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: infra/docker/web.Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/carob-web:${{ steps.tag.outputs.tag }}
+
+  staging:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: docker/login-action@v4
+        with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      - name: Promote to staging
+        env: { TAG: "${{ needs.build.outputs.tag }}" }
+        run: |
+          for image in carob-api carob-web; do
+            docker buildx imagetools create -t "$REGISTRY/$image:staging" "$REGISTRY/$image:$TAG"
+          done
+          echo "Staging now runs $TAG. Pull it locally with: make staging-up" >> "$GITHUB_STEP_SUMMARY"
+
+  production:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: docker/login-action@v4
+        with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      - name: Promote to production
+        env: { TAG: "${{ needs.build.outputs.tag }}", VERSION: "${{ github.ref_name }}" }
+        run: |
+          for image in carob-api carob-web; do
+            docker buildx imagetools create -t "$REGISTRY/$image:production" -t "$REGISTRY/$image:$VERSION" "$REGISTRY/$image:$TAG"
+          done
+          echo "Production now runs $VERSION ($TAG). Pull it locally with: make prod-up" >> "$GITHUB_STEP_SUMMARY"

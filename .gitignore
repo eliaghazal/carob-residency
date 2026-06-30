@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.env
+*.sqlite3
+/models/
+/data/
+/reports/
+node_modules/
+web/dist/
+.DS_Store
+infra/env/staging.env
+infra/env/production.env
+.drill-state.json

@@ -1,0 +1,86 @@
+# Development: `make dev`. Source is mounted; the API reloads on save.
+# Console http://localhost:5173 (make web-dev) · API http://localhost:8000/docs
+# Paystub http://localhost:8090 · Mailpit http://localhost:8025 · Grafana http://localhost:3000 (make observe)
+
+name: carob
+
+x-python: &python
+  build: { context: ., dockerfile: infra/docker/python.Dockerfile }
+  env_file: infra/env/dev.env
+  depends_on:
+    db: { condition: service_healthy }
+
+# The API, the worker and Paystub share one image, so each says how to check it.
+x-health: &health
+  interval: 5s
+  timeout: 3s
+  retries: 5
+  start_period: 30s
+
+services:
+  db:
+    image: postgres:17.11-alpine
+    environment: { POSTGRES_USER: carob, POSTGRES_PASSWORD: carob, POSTGRES_DB: carob }
+    ports: ["5432:5432"]
+    volumes: [db:/var/lib/postgresql/data, ./infra/db-init:/docker-entrypoint-initdb.d:ro]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U carob"]
+      interval: 2s
+      retries: 30
+
+  migrate:
+    <<: *python
+    command: sh -c "alembic upgrade head && python -m carob.seed --demo"
+    restart: "no"
+
+  api:
+    <<: *python
+    command: uvicorn carob.api.app:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/src
+    ports: ["8000:8000"]
+    volumes: [./src:/app/src]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
+
+  worker:
+    <<: *python
+    command: carob-worker
+    volumes: [./src:/app/src]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9101/metrics', timeout=2)"]
+
+  paystub:
+    <<: *python
+    command: uvicorn paystub.app:app --host 0.0.0.0 --port 8090
+    env_file: infra/env/paystub.env
+    ports: ["8090:8090"]
+    volumes: [paystub:/data]
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/healthz', timeout=2)"]
+
+  mailpit:
+    image: axllent/mailpit:v1.31
+    ports: ["8025:8025"]
+
+  prometheus:
+    image: prom/prometheus:v3.9.1
+    profiles: [observability]
+    volumes: [./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro]
+    ports: ["9090:9090"]
+
+  grafana:
+    image: grafana/grafana:13.2.3
+    profiles: [observability]
+    environment: { GF_AUTH_ANONYMOUS_ENABLED: "true", GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer }
+    volumes: [./infra/grafana/provisioning:/etc/grafana/provisioning:ro]
+    ports: ["3000:3000"]
+
+volumes:
+  db:
+  paystub:

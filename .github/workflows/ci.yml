@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17.11-alpine
+        env: { POSTGRES_USER: carob, POSTGRES_PASSWORD: carob, POSTGRES_DB: carob_test }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U carob" --health-interval 2s --health-timeout 2s --health-retries 30
+    env:
+      CAROB_DATABASE_URL: postgresql+psycopg://carob:carob@localhost:5432/carob_test
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with: { version: "0.13.0" }
+      - run: uv sync --frozen
+      - name: Lint
+        run: uv run ruff check . && uv run ruff format --check .
+      - name: Types
+        run: uv run mypy
+      - name: Tests
+        run: uv run pytest
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run: { working-directory: web }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: "24" }
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - run: npm test

@@ -1,0 +1,74 @@
+[project]
+name = "carob"
+version = "1.0.0"
+description = "Carob: wallets, transfers, top-ups, exchange and support for the Levant (a fictional company; a training simulation)"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "alembic==1.20.0",
+    "argon2-cffi==25.1.0",
+    "email-validator==2.3.0",
+    "fastapi==0.143.0",
+    "httpx==0.28.1",
+    "prometheus-client==0.26.0",
+    "psycopg[binary]==3.3.6",
+    "pydantic==2.14.0",
+    "pydantic-settings==2.15.0",
+    "pyjwt==2.15.1",
+    "python-multipart==0.0.32",
+    "sqlalchemy==2.1.4",
+    "uvicorn==0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "mypy==2.4.0",
+    "pytest==9.1.1",
+    "ruff==0.17.0",
+]
+ml = [
+    "datasets==5.1.0",
+    "joblib==1.6.0",
+    "numpy==2.5.3",
+    "pandas==3.0.6",
+    "pyarrow==26.0.0",
+    "scikit-learn==1.9.1",
+]
+
+[project.scripts]
+carob-worker = "carob.worker.main:main"
+carob-seed = "carob.seed:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/carob", "src/paystub", "src/carob_ml"]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "SIM"]
+ignore = ["S101", "S311", "B008", "E501"]  # the formatter owns line length
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106"]
+"src/carob/seed.py" = ["S105", "S106"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src/carob", "src/paystub"]
+ignore_missing_imports = true
+check_untyped_defs = true

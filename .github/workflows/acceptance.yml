@@ -1,0 +1,53 @@
+# Hidden acceptance tests for a ticket. Started only by Dojo (Residency), never by a push:
+# the first run for a ticket is the one that counts. The tests live in a private repository;
+# this log and the artifact contain test names and hints only, never test code.
+name: acceptance
+run-name: acceptance ${{ inputs.ticket }} ${{ inputs.request }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      ticket: { description: "Ticket id, e.g. T-010", required: true }
+      sha: { description: "Commit to test", required: true }
+      request: { description: "Dojo's request id", required: true }
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17.11-alpine
+        env: { POSTGRES_USER: carob, POSTGRES_PASSWORD: carob, POSTGRES_DB: carob_acceptance }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U carob" --health-interval 2s --health-timeout 2s --health-retries 30
+    env:
+      TICKET: ${{ inputs.ticket }}
+      SHA: ${{ inputs.sha }}
+      REQUEST: ${{ inputs.request }}
+    steps:
+      - name: Check inputs
+        run: |
+          [[ "$TICKET" =~ ^[A-Z]-[0-9]{2,4}$ ]] || { echo "bad ticket id"; exit 1; }
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "sha must be a full commit id"; exit 1; }
+          [[ "$REQUEST" =~ ^[A-Za-z0-9-]{8,64}$ ]] || { echo "bad request id"; exit 1; }
+      - uses: actions/checkout@v7
+        with: { ref: "${{ inputs.sha }}", path: carob }
+      - uses: actions/checkout@v7
+        with:
+          repository: eliaghazal/carob-residency-acceptance
+          token: ${{ secrets.ACCEPTANCE_TOKEN }}
+          path: kit
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with: { version: "0.13.0" }
+      - name: Run the hidden tests
+        run: uv run --project kit python kit/tools/acceptance.py --ticket "$TICKET" --repo carob --request "$REQUEST" --out result.json
+        env:
+          ACCEPTANCE_DATABASE_URL: postgresql+psycopg://carob:carob@localhost:5432/carob_acceptance
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: { name: "acceptance-${{ inputs.request }}", path: result.json, retention-days: 90 }

@@ -1,0 +1,78 @@
+# Staging and production: released images, no source mounts.
+#   make staging-up   (project carob-staging, ports 81xx, images tagged staging)
+#   make prod-up      (project carob-prod,    ports 82xx, images tagged production)
+# The env file sets CAROB_IMAGE_TAG, the ports and the secrets for each environment.
+# Run it from the repository root with --project-directory . (the Makefile does), so paths
+# such as CAROB_ENV_FILE are read from the root, not from infra/.
+
+x-python: &python
+  image: ghcr.io/eliaghazal/carob-api:${CAROB_IMAGE_TAG:?set CAROB_IMAGE_TAG}
+  env_file: ${CAROB_ENV_FILE:?set CAROB_ENV_FILE}
+  restart: unless-stopped
+  depends_on:
+    db: { condition: service_healthy }
+
+# The API, the worker and Paystub share one image, so each says how to check it.
+x-health: &health
+  interval: 5s
+  timeout: 3s
+  retries: 5
+  start_period: 30s
+
+services:
+  db:
+    image: postgres:17.11-alpine
+    environment: { POSTGRES_USER: carob, POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}", POSTGRES_DB: carob }
+    volumes: [db:/var/lib/postgresql/data]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U carob"]
+      interval: 2s
+      retries: 30
+
+  migrate:
+    <<: *python
+    command: sh -c "alembic upgrade head && python -m carob.seed ${CAROB_SEED_ARGS:-}"
+    restart: "no"
+
+  api:
+    <<: *python
+    command: uvicorn carob.api.app:app --host 0.0.0.0 --port 8000 --workers 2
+    ports: ["${CAROB_API_PORT:?set CAROB_API_PORT}:8000"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
+
+  worker:
+    <<: *python
+    command: carob-worker
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9101/metrics', timeout=2)"]
+
+  paystub:
+    <<: *python
+    command: uvicorn paystub.app:app --host 0.0.0.0 --port 8090
+    ports: ["${PAYSTUB_PORT:?set PAYSTUB_PORT}:8090"]
+    volumes: [paystub:/data]
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/healthz', timeout=2)"]
+
+  web:
+    image: ghcr.io/eliaghazal/carob-web:${CAROB_IMAGE_TAG}
+    ports: ["${CAROB_WEB_PORT:?set CAROB_WEB_PORT}:80"]
+    restart: unless-stopped
+    depends_on: [api]
+
+  mailpit:
+    image: axllent/mailpit:v1.31
+    ports: ["${MAILPIT_PORT:?set MAILPIT_PORT}:8025"]
+
+volumes:
+  db:
+  paystub:
