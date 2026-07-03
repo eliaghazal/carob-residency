@@ -49,6 +49,7 @@ export function Conversation({ id, me, onBack }: { id: string; me: Staff; onBack
         <h2>{customer.full_name}</h2>
         <p className="row muted">
           <span>{QUEUE_LABELS[c.queue] ?? c.queue}</span>
+          {c.confidence !== null ? <span>router {Math.round(c.confidence * 100)}%</span> : null}
           <SlaTimer dueAt={c.sla_due_at} answered={c.first_response_at !== null} />
         </p>
         <div className="actions">
