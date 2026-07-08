@@ -45,6 +45,7 @@ def evaluate(
     report: dict[str, object] = {
         "version": version,
         "overall": _scores(test.intent, test.predicted),
+        "by_variety": {v: _scores(g.intent, g.predicted) for v, g in test.groupby("variety")},
     }
     REPORTS.mkdir(exist_ok=True)
     (REPORTS / f"eval-{version}.json").write_text(json.dumps(report, indent=2))
