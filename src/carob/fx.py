@@ -2,7 +2,7 @@
 
 Policy (Finance FP-5, docs/policies/fees.md): the customer receives
 amount x rate x (1 - spread), computed exactly and rounded half to even at
-the target currency's minor unit. A quote fixes the amount for 2 minutes
+the target currency's minor unit. A quote fixes the amount for 30 seconds
 and can be used once.
 """
 
@@ -22,7 +22,7 @@ from carob.models import Account, Customer, FxConversion, FxQuote, FxRate
 from carob.money import exponent
 from carob.outbox import enqueue
 
-QUOTE_TTL = timedelta(minutes=2)
+QUOTE_TTL = timedelta(seconds=30)
 
 
 def current_rate(session: Session, base: str, quote: str) -> FxRate:

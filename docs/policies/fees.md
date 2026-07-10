@@ -18,5 +18,5 @@ Example: 106.00 USD gives 0.265 USD, which rounds half up to 0.27 USD.
 ## FP-5: exchange
 
 The customer receives `amount x rate x (1 - spread)`, computed exactly and **rounded half to even
-at the target currency's minor unit**. A quote fixes that amount for 2 minutes and can be used
+at the target currency's minor unit**. A quote fixes that amount for 30 seconds and can be used
 once; a conversion made with a quote credits exactly the quoted amount.
