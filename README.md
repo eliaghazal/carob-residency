@@ -64,7 +64,7 @@ Start with [docs/onboarding.md](docs/onboarding.md).
    `production` environment; `make prod-up` runs it on ports 82xx.
 
 Rollback: set `CAROB_IMAGE_TAG` in `infra/env/production.env` to the previous version and run
-`make prod-up`.
+`make prod-up`. On call: [docs/runbooks/oncall.md](docs/runbooks/oncall.md).
 
 ## Data and models
 
