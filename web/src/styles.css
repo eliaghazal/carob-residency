@@ -42,6 +42,7 @@ main { padding: 16px 24px; max-width: 900px; }
 .preview { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .sla { font-size: 13px; color: var(--muted); }
+.sla-breached { color: var(--danger); font-weight: 600; }
 .sla-ok { color: var(--ok); }
 
 .conversation header { display: grid; gap: 4px; margin-bottom: 12px; }
