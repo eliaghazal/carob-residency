@@ -11,7 +11,7 @@ BANKING77 = {
 
 ARBANKING77 = {
     "repo": "SinaLab/ArBanking77",
-    "commit": "main",
+    "commit": "2e3a5639e254bc28828ed0af6d3059d64d3b97fc",
     "base_url": "https://raw.githubusercontent.com/SinaLab/ArBanking77/{commit}/data/{file}",
     "license": "MIT, according to the Hugging Face model card (SinaLab/ArBanking77)",
     "train": "Banking77_Arabized_MSA_PAL_train.csv",
