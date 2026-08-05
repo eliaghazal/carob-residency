@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from carob import audit
 from carob.accounts import owned_wallet, wallet_for
 from carob.db import transaction
-from carob.errors import AccountNotActive, Forbidden, InsufficientFunds, InvalidAmount, NotFound
+from carob.errors import AccountNotActive, Conflict, Forbidden, InsufficientFunds, InvalidAmount, NotFound
 from carob.ledger import Leg, house_account, post_entry
 from carob.models import Account, Customer, Transfer
 from carob.money import Money
@@ -37,6 +37,8 @@ def send(
     recipient = session.scalar(select(Customer).where(Customer.email == to_email.strip().lower()))
     if recipient is None:
         raise NotFound("no Carob customer has that email")
+    if recipient.id == customer.id:
+        raise Conflict("you cannot send money to yourself")
     if customer.kyc_status != "verified":
         raise Forbidden("verify your identity before sending money")
     target = wallet_for(session, recipient.id, currency)

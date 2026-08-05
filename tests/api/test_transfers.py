@@ -64,3 +64,13 @@ def test_cannot_spend_from_someone_elses_wallet(client: TestClient, signup) -> N
         headers=mallory.headers,
     )
     assert response.status_code == 403
+
+
+def test_cannot_send_to_yourself(client: TestClient, signup) -> None:  # type: ignore[no-untyped-def]
+    alice = signup("Alice", usd=10_000)
+    response = client.post(
+        "/v1/transfers",
+        json={"from_account_id": alice.wallets["USD"], "to_email": alice.email, "amount_minor": 500},
+        headers=alice.headers,
+    )
+    assert response.status_code == 409
