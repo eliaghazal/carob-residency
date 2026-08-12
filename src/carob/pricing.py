@@ -28,7 +28,7 @@ TRANSFER_FEES: dict[str, FeeRule] = {
 
 def _apply_bps(amount_minor: int, bps: int) -> int:
     """Round half up to the minor unit (Finance policy FP-3)."""
-    return (amount_minor * bps + 5_000) // 10_000
+    return round(amount_minor * bps / 10_000)
 
 
 def transfer_fee(amount_minor: int, currency: str) -> int:
