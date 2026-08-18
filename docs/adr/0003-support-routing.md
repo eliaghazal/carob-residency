@@ -12,7 +12,7 @@ in English and in Arabic, often in dialect.
 - Route the first message of a conversation to a queue with a classifier over the 77 BANKING77
   intents, trained on BANKING77 (English) and ArBanking77 (Arabic) by `src/carob_ml`.
 - Models live in a registry directory with a manifest (version, SHA-256, intent-to-queue map,
-  metrics, data manifest hash).
+  metrics, data manifest hash). The API refuses a model whose hash does not match.
 - Keep keyword rules as the fallback when no model is deployed or loading fails.
 - Below a confidence threshold, send the conversation to triage rather than guess.
 

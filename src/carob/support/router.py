@@ -7,6 +7,7 @@ English and Arabic) from the model registry. Low-confidence results go to
 the triage queue, where a person routes them by hand.
 """
 
+import hashlib
 import json
 import logging
 import re
@@ -132,6 +133,10 @@ class ModelRouter:
 
         path = Path(directory)
         manifest: dict[str, Any] = json.loads((path / "manifest.json").read_text())
+        blob = (path / manifest["file"]).read_bytes()
+        digest = hashlib.sha256(blob).hexdigest()
+        if digest != manifest["sha256"]:
+            raise RuntimeError(f"model file hash {digest} does not match its manifest")
         self._pipeline = joblib.load(path / manifest["file"])
         self._queues: dict[str, str] = manifest["intent_to_queue"]
         self.version = manifest["version"]
