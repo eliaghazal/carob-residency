@@ -17,6 +17,7 @@ export function CustomerPanel({ customerId }: { customerId: string }) {
       <h3>Customer</h3>
       <p>
         {data.customer.email} · KYC {data.customer.kyc_status}
+        {data.customer.segment === "vip" ? " · VIP" : ""}
       </p>
       <ul className="wallets">
         {data.wallets.map((w) => (
