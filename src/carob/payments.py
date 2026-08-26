@@ -68,6 +68,11 @@ def handle_paystub_event(session: Session, event: dict[str, Any]) -> str:
         if event["type"] == "payment.succeeded":
             if topup.status == "succeeded":
                 return "duplicate"
+            if int(payment["amount"]) != topup.amount_minor or payment["currency"] != topup.currency:
+                log.error(
+                    "webhook amount differs from the top-up", extra={"fields": {"topup_id": str(topup.id)}}
+                )
+                return "mismatch"
             clearing = house_account(session, "provider_clearing", topup.currency)
             entry = post_entry(
                 session,
