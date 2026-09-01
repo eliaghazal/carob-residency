@@ -14,7 +14,7 @@ import time
 from datetime import UTC, datetime, timedelta
 
 from prometheus_client import start_http_server
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select, text, update
 
 from carob.db import session_scope
 from carob.logging import configure_logging
@@ -33,6 +33,7 @@ log = logging.getLogger("carob.worker")
 
 BATCH = 20
 MAX_ATTEMPTS = 10
+PENDING_TOPUP_EXPIRY = timedelta(hours=24)
 _stopping = False
 
 
@@ -95,9 +96,14 @@ def deliver_due() -> int:
 
 
 def housekeeping() -> None:
-    """Refresh the gauges the on-call alerts use."""
+    """Expire abandoned top-ups and refresh the gauges the on-call alerts use."""
     now = datetime.now(UTC)
     with session_scope() as session:
+        session.execute(
+            update(Topup)
+            .where(Topup.status == "pending", Topup.created_at < now - PENDING_TOPUP_EXPIRY)
+            .values(status="expired", updated_at=now)
+        )
         pending, oldest = session.execute(
             select(func.count(), func.min(Topup.created_at)).where(Topup.status == "pending")
         ).one()
