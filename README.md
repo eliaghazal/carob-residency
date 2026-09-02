@@ -53,7 +53,7 @@ CI runs all of them on every pull request; `main` only accepts pull requests who
 | `infra/` | Dockerfiles, Compose for staging and production, Prometheus and Grafana |
 | `docs/` | Architecture, decisions (`adr/`), policies, the on-call runbook, the data card |
 
-Start with [docs/onboarding.md](docs/onboarding.md).
+Start with [docs/architecture.md](docs/architecture.md) and [docs/onboarding.md](docs/onboarding.md).
 
 ## How work ships
 
