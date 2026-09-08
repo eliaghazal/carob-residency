@@ -1,6 +1,6 @@
 import pytest
 
-from carob.money import Money, parse_major
+from carob.money import Money, UnsupportedCurrency, parse_major
 
 
 def test_formats_with_the_currency_minor_units() -> None:
@@ -19,3 +19,10 @@ def test_parses_major_units_exactly() -> None:
     assert parse_major("1,000", "LBP") == Money(100000, "LBP")
     with pytest.raises(ValueError):
         parse_major("0.001", "USD")
+
+
+def test_refuses_unknown_currencies_and_floats() -> None:
+    with pytest.raises(UnsupportedCurrency):
+        Money(1, "GBP")
+    with pytest.raises(TypeError):
+        Money(1.5, "USD")  # type: ignore[arg-type]
