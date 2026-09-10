@@ -10,6 +10,17 @@
 Both map to the same 77 intents (`src/carob_ml/labels.py`). English validation is a stratified
 tenth of the English training rows (seed 20260303).
 
+## Baseline (router trained 2026-09-10, TF-IDF characters and words, logistic regression)
+
+| Test set | Rows | Accuracy | Macro-F1 | Queue accuracy |
+| --- | --- | --- | --- | --- |
+| English | 3,076 | 0.904 | 0.905 | 0.967 |
+| MSA | 3,574 | 0.879 | 0.879 | 0.954 |
+| Palestinian | 3,807 | 0.847 | 0.841 | 0.943 |
+| Saudi | 3,580 | 0.721 | 0.715 | 0.887 |
+| Moroccan | 3,574 | 0.607 | 0.597 | 0.809 |
+| Tunisian | 999 | 0.457 | 0.198 | 0.653 |
+
 ## Known limits
 
 - The Arabic training data is MSA and Palestinian only; the Gulf and Maghrebi results show it.
