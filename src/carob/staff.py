@@ -47,6 +47,8 @@ def customer_for_staff(session: Session, staff: Staff, customer_id: uuid.UUID) -
         raise NotFound("customer not found")
     if not can_view_customer(session, staff, customer_id):
         raise Forbidden("open a conversation with this customer first")
+    with transaction(session):
+        audit.record(session, "staff", staff.id, "customer.viewed", str(customer_id))
     return customer
 
 
