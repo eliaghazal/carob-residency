@@ -5,7 +5,7 @@ RESIDENCY_KIT ?= ../carob-residency-acceptance
 RELEASE := docker compose --project-directory . -f infra/compose.release.yaml
 
 .PHONY: help dev down logs test lint format typecheck migrate seed web-dev web-test observe \
-        staging-up staging-down prod-up prod-down data train evaluate drill drill-check
+        staging-up staging-down prod-up prod-down traffic data train evaluate drill drill-check
 
 help: ## list targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-14s %s\n", $$1, $$2}'
@@ -61,6 +61,9 @@ prod-up: ## run the production release (images tagged production)
 
 prod-down:
 	$(RELEASE) -p carob-prod --env-file infra/env/production.env down
+
+traffic: ## simulated customers against production (BASE=... to change)
+	uv run python scripts/traffic.py --base $${BASE:-http://localhost:8200} --paystub $${PAYSTUB:-http://localhost:8290}
 
 data: ## build the routing dataset from Hugging Face and GitHub
 	uv run --group ml python -m carob_ml data
