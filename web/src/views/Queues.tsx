@@ -14,8 +14,10 @@ export function Queues({ selected, onSelect }: { selected: string | null; onSele
         .then((q) => live && (setQueues(q), setError(null)))
         .catch(() => live && setError("Queues are unavailable. Retrying."));
     load();
+    const id = setInterval(load, 15_000);
     return () => {
       live = false;
+      clearInterval(id);
     };
   }, []);
 
