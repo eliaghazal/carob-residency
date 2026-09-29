@@ -49,3 +49,35 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run build
       - run: npm test
+
+  compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      RELEASE: docker compose --project-directory . -f infra/compose.release.yaml -p carob-ci --env-file infra/env/staging.env
+    steps:
+      - uses: actions/checkout@v7
+      - name: Compose files are valid
+        run: |
+          docker compose config --quiet
+          # The staging example with throwaway values in place of the secrets it leaves empty.
+          sed -e 's/^CAROB_IMAGE_TAG=.*/CAROB_IMAGE_TAG=ci/' \
+              -e 's/<POSTGRES_PASSWORD>/ci-only-not-a-secret/' \
+              -e 's/^\([A-Z_]*\(PASSWORD\|SECRET\|TOKEN\)\)=$/\1=ci-only-not-a-secret/' \
+              infra/env/staging.env.example > infra/env/staging.env
+          $RELEASE config --quiet
+      - name: Build the images
+        run: |
+          docker build -f infra/docker/python.Dockerfile -t ghcr.io/eliaghazal/carob-api:ci .
+          docker build -f infra/docker/web.Dockerfile -t ghcr.io/eliaghazal/carob-web:ci .
+      - name: The release stack starts and answers
+        run: |
+          $RELEASE up -d --wait --wait-timeout 180
+          curl -fsS http://localhost:8100/healthz
+          curl -fsS http://localhost:8190/healthz
+          curl -fsS http://localhost:8180/api/healthz
+          curl -fsS -X POST http://localhost:8100/v1/signup -H 'content-type: application/json' \
+            -d '{"full_name": "CI Smoke", "email": "ci-smoke@example.com"}' -o /dev/null -w 'signup %{http_code}\n'
+      - name: Logs
+        if: failure()
+        run: $RELEASE logs --no-color --tail 200
