@@ -80,9 +80,8 @@ Rollback: set `CAROB_IMAGE_TAG` in `infra/env/production.env` to the previous ve
   5 minutes; deployments only from tags `v*`).
 - Actions secret `ACCEPTANCE_TOKEN`: a fine-grained token with read access to the private acceptance
   repository, used only by `.github/workflows/acceptance.yml`.
-- Packages: GitHub creates `carob-api` and `carob-web` private on the first deploy, even from a public
-  repository. Make both public (each package's settings, Change visibility) so `make staging-up` and
-  `make prod-up` pull without signing in to ghcr.io.
+- Packages: the deploy workflow publishes `carob-api` and `carob-web` to ghcr.io, linked to this
+  repository and public, so `make staging-up` and `make prod-up` pull without signing in. Nothing to set.
 
 ## License
 
